@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<head>
+    <meta charset="utf-8" />
+    <!-- Set the viewport width to device width for mobile -->
+    <meta name="viewport" content="width=device-width" />
+
+    <title>杨昌明的Blog - spring</title>
+
+    <link rel="stylesheet" href="/theme/css/normalize.css" />
+    <link rel="stylesheet" href="/theme/css/foundation.min.css" />
+    <link rel="stylesheet" href="/theme/css/style.css" />
+    <link rel="stylesheet" href="/theme/css/pygments.css" />	
+    <script src="/theme/js/modernizr.js"></script>
+</head>
+
+<body>
+
+<!-- Nav Bar -->
+<nav>
+<div class="top-bar">
+<div class="row">
+    <div class="large-9 large-centered columns">
+	    <h1><a href="">杨昌明的Blog</a></h1>
+    </div>
+</div>
+</div>
+
+<!-- Show menu items and pages -->
+<div class="row">
+<div class="large-9 columns">
+    <ul class="button-group navigation">
+
+    </ul>
+</div>
+</div>
+</nav>
+<!-- End Nav -->
+
+
+<!-- Main Page Content and Sidebar -->
+<div class="row">
+
+    <!-- Main Blog Content -->
+    <div class="large-9 columns">
+        
+        
+
+            <article>
+                <a href="/pages/2015/12/01/springmvc/"><h3 class="article-title">Spring与SpringMVC的容器关系分析</h3></a>
+<h6 class="subheader" title="2015-12-01T00:00:00+01:00">二 01 十二月 2015
+</h6>
+
+
+<p>Spring和SpringMVC作为Bean管理容器和MVC层的默认框架，已被众多WEB应用采用，而实际使用时，由于有了强大的注解功能，很多基于XML的配置方式已经被替代，但是在实际项目中，同时配置Spring和SpringMVC时会出现一些奇怪的异常，比如Bean被多次加载，多次实例化，或者依赖注入时，Bean不能被自动注入，但是明明你已经将该Bean注册了的。找原因还是要看问题的根源，我们从容器说起。
+在Spring整体框架的核心概念中，容器是核心思想，就是用来管理Bean的整个生命周期的，而在一个项目中，容器不一定只有一个，Spring中可以包括多个容器，而且容器有上下层关系，目前最常见的一种场景就是在一个项目中引入Spring和SpringMVC这两个框架，其实就是2个容器，Spring是根容器，SpringMVC是其子容器，并且在Spring根容器中对于SpringMVC容器中的Bean是不可见的，而在SpringMVC容器中对于Spring根容器中的Bean是可见的，也就是子容器可以看见父容器中的注册的Bean，反之就不行。理解这点很重要，因为这是一个规则，是Spring自己设定的，但是往下看，我们会发现有些地方它并不默认使用这个规则。
+当我们使用注解时，对于Bean注册这个功能的实现就不需要在给每个Bean配置XML了，只要使用统一的如下配置即可。</p>
+<div class="highlight"><pre><span></span>&lt;context:component-scan base-package=“com.test&quot; /&gt;
+</pre></div>
+
+
+<p>根据Spring提供的参考手册，该配置的功能是扫描默认包下的所有的@Component注解，并且自动注册到容器中，同时也扫描@Controller，@Service，@Respository这三个注解，他们是继承自@Component。
+除了以上我们使用的扫描配置，在项目中我们经常见到的就是<code>&lt;context:annotation-config/&gt;</code>这个配置，其实有了以上的配置，这个是可以省略掉的。
+还有一个SpringMVC相关的是<code>&lt;mvc:annotation-driven /&gt;</code>配置，经过验证，这个是必须要配置的，因为它是和@RequestMapping结合使用的，这里补充下SpringMVC框架相关的知识点。</p>
+<blockquote>
+<p>HandlerMapping，是SpringMVC中用来处理Request请求URL到具体Controller的，其自身也分成很多种类；
+HandlerAdapter，是SpringMVC中用来处理具体请求映射到具体方法的，其自身也分很多种类；</p>
+<p>@RequestMapping这个注解的主要目的就是对具体的Controller和方法进行注册，以方便HandlerMapping用来处理请求的映射。但是@RequestMapping需要结合<code>&lt;mvc:annotation-driven /&gt;</code>使用才能生效。</p>
+</blockquote>
+<p>好了，有了以上基础知识的铺垫，我们看下现在这样的一个使用场景中，Spring与SpringMVC的容器冲突的原因在那里！
+Spring配置文件applicationContext.xml，SpringMVC配置文件applicationContext-MVC.xml，这样项目中就有2个容器了，配置方式A，如下：
+applicationContext.xml中配置了<code>&lt;context:component-scan base-package=“com.test" /&gt;</code>，负责所有需要注册的Bean的扫描工作，applicationContext-MVC.xml中配置<code>&lt;mvc:annotation-driven /&gt;</code>，负责springMVC相关注解的使用，启动项目发现，springMVC失效，无法进行跳转，开启log的DEBUG级别进行调试，发现springMVC容器中的请求好像没有映射到具体controller中；</p>
+<p>配置方式B，如下：
+为了快速验证效果，将<code>&lt;context:component-scan base-package=“com.test" /&gt;</code>扫描配置到applicationContext-MVC.xml中，重启后，验证成功，springMVC跳转有效。
+要想查看具体原因，翻看源码，从springMVC的DispatcherServlet开始看，在一个请求进来之后，发生了什么？漫长的查看之后，找到原因，如下。
+springMVC初始化时，会寻找所有当前容器中的所有@Controller注解的Bean，来确定其是否是一个handler，而当前容器springMVC中注册的Bean中并没有@Controller注解的，注意，上面提及的配置方式A，所有的@Controller配置的Bean都注册在Spring这个父容器中了，看代码。</p>
+<div class="highlight"><pre><span></span><span class="nt">protected</span> <span class="nt">void</span> <span class="nt">initHandlerMethods</span><span class="o">()</span> <span class="p">{</span>
+    <span class="err">if</span> <span class="err">(logger.isDebugEnabled())</span> <span class="err">{</span>
+        <span class="err">logger.debug(&quot;Looking</span> <span class="err">for</span> <span class="err">request</span> <span class="err">mappings</span> <span class="err">in</span> <span class="err">application</span> <span class="n">context</span><span class="p">:</span> <span class="err">&quot;</span> <span class="o">+</span> <span class="nf">getApplicationContext</span><span class="p">());</span>
+    <span class="p">}</span>
+    <span class="nt">String</span><span class="cp">[]</span> <span class="nt">beanNames</span> <span class="o">=</span> <span class="o">(</span><span class="nt">this</span><span class="p">.</span><span class="nc">detectHandlerMethodsInAncestorContexts</span> <span class="o">?</span>
+            <span class="nt">BeanFactoryUtils</span><span class="p">.</span><span class="nc">beanNamesForTypeIncludingAncestors</span><span class="o">(</span><span class="nt">getApplicationContext</span><span class="o">(),</span> <span class="nt">Object</span><span class="p">.</span><span class="nc">class</span><span class="o">)</span> <span class="o">:</span>
+            <span class="nt">getApplicationContext</span><span class="o">()</span><span class="p">.</span><span class="nc">getBeanNamesForType</span><span class="o">(</span><span class="nt">Object</span><span class="p">.</span><span class="nc">class</span><span class="o">));</span>
+    <span class="nt">for</span> <span class="o">(</span><span class="nt">String</span> <span class="nt">beanName</span> <span class="o">:</span> <span class="nt">beanNames</span><span class="o">)</span> <span class="p">{</span>
+        <span class="err">if</span> <span class="err">(isHandler(getApplicationContext().getType(beanName))){</span>
+            <span class="err">detectHandlerMethods(beanName)</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="err">}</span>
+    <span class="nt">handlerMethodsInitialized</span><span class="o">(</span><span class="nt">getHandlerMethods</span><span class="o">());</span>
+<span class="err">}</span>
+</pre></div>
+
+
+<p>在方法isHandler中会判断当前bean的注解是否是controller，代码如下：</p>
+<div class="highlight"><pre><span></span><span class="kr">protected</span> <span class="kr">boolean</span> <span class="nx">isHandler</span><span class="p">(</span><span class="nx">Class</span><span class="cp">&lt;?</span><span class="o">&gt;</span> <span class="nx">beanType</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="nx">AnnotationUtils</span><span class="o">.</span><span class="nx">findAnnotation</span><span class="p">(</span><span class="nx">beanType</span><span class="p">,</span> <span class="nx">Controller</span><span class="o">.</span><span class="nx">class</span><span class="p">)</span> <span class="o">!=</span> <span class="k">null</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>在配置方式B中，springMVC容器中包括了所有的@Controller注解的Bean，所以自然就能找到了。
+以上是原因，解决办法是什么？注意看initHandlerMethods()方法中，detectHandlerMethodsInAncestorContexts这个Switch，它主要控制从那里获取容器中的bean，是否包括父容器，默认是不包括的。所以解决办法是有的，即在springMVC的配置文件中配置HandlerMapping的detectHandlerMethodsInAncestorContexts属性为true即可（这里需要根据具体项目看使用的是哪种HandlerMapping），让其检测父容器的bean。如下：</p>
+<div class="highlight"><pre><span></span><span class="nt">&lt;bean</span> <span class="na">class=</span><span class="s">&quot;org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping&quot;</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;property</span> <span class="na">name=</span><span class="s">&quot;detectHandlerMethodsInAncestorContexts&quot;</span><span class="nt">&gt;</span>
+        <span class="nt">&lt;value&gt;</span>true<span class="nt">&lt;/value&gt;</span>
+    <span class="nt">&lt;/property&gt;</span>
+<span class="nt">&lt;/bean&gt;</span>
+</pre></div>
+
+
+<p>以上已经有了2种解决方案了，但在实际工程中，会包括很多配置，根据不同的业务模块来划分，所以我们一般思路是各负其责，明确边界，Spring根容器负责所有其他非controller的Bean的注册，而SpringMVC只负责controller相关的Bean的注册。第三种方案如下：</p>
+<blockquote>
+<p>Spring容器配置，排除所有@controller的Bean</p>
+</blockquote>
+<div class="highlight"><pre><span></span><span class="nt">&lt;context:component-scan</span> <span class="na">base-package=</span><span class="s">&quot;com.fsnip.open&quot;</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;context:exclude-filter</span> <span class="na">type=</span><span class="s">&quot;annotation&quot;</span> <span class="na">expression=</span><span class="s">&quot;org.springframework.stereotype.Controller&quot;</span><span class="nt">/&gt;</span>
+<span class="nt">&lt;/context:component-scan&gt;</span>
+</pre></div>
+
+
+<blockquote>
+<p>SpringMVC容器配置，让其只包括@controller的Bean</p>
+</blockquote>
+<div class="highlight"><pre><span></span><span class="nt">&lt;context:component-scan</span> <span class="na">base-package=</span><span class="s">&quot;com.fsnip.open&quot;</span> <span class="na">use-default-filters=</span><span class="s">&quot;false&quot;</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;context:include-filter</span> <span class="na">type=</span><span class="s">&quot;annotation&quot;</span> <span class="na">expression=</span><span class="s">&quot;org.springframework.stereotype.Controller&quot;</span> <span class="nt">/&gt;</span>
+<span class="nt">&lt;/context:component-scan&gt;</span>
+</pre></div>
+
+
+<p>个人比较推荐第三种方案。引申一下，项目中使用事务的配置方案，也会在这种场景下失效，归根结底也是由于2个容器的可见性问题导致，可以结合具体问题按照上面的思路进行查找原因！</p><p class="subheader">Category: <a href="/category/spring.html">spring</a>
+
+    Tagged: 
+    <a href="/tag/spring.html">spring </a>
+</p>
+
+
+
+            </article>
+
+<div class="pagination-centered">
+<h6 class="subheader">Page 1 of 1</h6>
+
+<p>
+
+</p>
+</div>
+
+
+
+            <!-- /#posts-list -->
+
+    </div>
+    <!-- End Main Content -->
+
+    <!-- Sidebar -->
+    <aside class="large-3 columns">
+        <h5 class="sidebar-title">Site</h5>
+        <ul class="side-nav">
+            <li><a href="/archives.html">Archives</a>
+            <li><a href="/tags.html">Tags</a>
+        </ul>
+
+		
+        <h5 class="sidebar-title">Categories</h5>
+        <ul class="side-nav">
+            <li><a href="/category/gui-yang.html">贵阳</a></li>
+            <li><a href="/category/spring.html">spring</a></li>
+            <li><a href="/category/work.html">work</a></li>
+   
+        </ul>
+
+        <h5 class="sidebar-title">Links</h5>
+        <ul class="side-nav">
+            <li><a href="http://runnf.com/">runnf</a></li>
+            <li><a href="http://www.gzit.info">贵州IT</a></li>
+        </ul>
+		
+
+    </aside> <!-- End Sidebar -->
+
+</div> <!-- End Main Content and Sidebar -->
+
+
+<!-- Footer -->
+<footer class="row">
+    <div class="large-12 columns">
+        <hr />
+        <div class="row">
+            <div class="large-6 columns">
+              <!--                  <p>杨昌明的Blog by changming</p> -->
+            </div>
+            </div>
+    </div>
+</footer>
+</body>
+</html>
