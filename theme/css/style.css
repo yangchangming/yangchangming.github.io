@@ -1,0 +1,54 @@
+h2, .h2 {
+    font-size: 20px;
+}
+
+hr {
+    width: 80%;
+    height: 0px;
+    border: solid #D1D7DC 0px;
+    border-top-width: 1px;
+    margin-bottom: 10px;
+}
+
+h3 {
+    text-align: center;
+}
+
+header {
+    margin-bottom: 40px;
+}
+
+.article-info {
+    text-align: center;
+    font-size: 0.9em;
+
+}
+
+.article-info a {
+    Text-Decoration: None;
+    border-bottom: 1px dashed;
+    Color: #018;
+}
+
+header .article-title {
+    color: #046111;
+}
+
+.article-title {
+    color: #666;
+}
+
+body {
+ font-family: "Segoe UI", verdana,arial,sans-serif,"微软雅黑";
+  background-color: #f0f0f0;
+  color: #111;
+  width: 80%;
+  min-width: 400px;
+  min-height: 200px;
+  padding: 1em;
+  margin: 5% 10%;
+  border: thin solid #f0f0f0;
+  display: block;
+  line-height: 180%;
+}
+
