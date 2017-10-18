@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="keywords" content="alerting, monitoring, alert, monitor">
+    <!-- disable auto fresh every 60 seconds -->
+    <!--
+    <meta http-equiv="refresh" content="60">
+    -->
+
+    <title>Redis笔记</title>
+    <link rel="stylesheet" href="/theme/css/bootstrap.min.css" >
+    <link rel="stylesheet" href="/theme/css/dashboard.css" >
+    <link rel="stylesheet" type="text/css" href="/theme/css/style.css" />
+
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+    <script src="/theme/js/html5shiv.js" type="text/javascript"></script>
+    <script src="/theme/js/respond.js" type="text/javascript"></script>
+    <![endif]-->
+
+  </head>
+
+  <body>
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <a class="navbar-brand" href="/">杨昌明的Blog </a>
+        </div>
+      </div>
+    </div>
+
+    <div  class="container-fluid">
+        <div class="row">
+            <div class="col-sm-12  col-md-12 main">
+                <div id="content">
+<article>
+    <header>
+        <h3 class="article-title">
+            Redis笔记
+            <!--<a href="/pages/redis-note" rel="bookmark" title="Permalink to Redis笔记">Redis笔记</a>-->
+        </h3>
+        <hr/>
+        <div class="article-info">
+            日期:&nbsp;2014-01-17&nbsp;|&nbsp;关注我:&nbsp;<a href="http://weibo.com/changmingy" target="_blank">新浪微博</a>
+        </div>
+    </header>
+
+    <div class="article-content">
+        <p>数据结构</p>
+<ul>
+<li>SortedSet zunionstore 方法可以对一个或者多个有序集合(sortedset)进行并集计算，如果目标集合是set，而不是sorted set，也可以进行合并</li>
+<li>SortedSet zunionstore 方法，当目标存储集合已经存在时，会进行值的覆盖</li>
+<li>
+<p>Hash</p>
+<ul>
+<li>这种结构，其内容实现其实是一个HashMap，即key对应一个字符串，而value是使用HashMap实现的。如图</li>
+</ul>
+<p><img alt="" src="/theme/images/redis-hash.jpg"></p>
+<ul>
+<li>只需要通过key+field既可以获取到value值。redis是单线程模型，如果map中的数据过大，遍历需要很长时间的话，就会阻塞客户端其他对redis的操作，这点需要注意。</li>
+<li>另外，当hash成员数量较少时，其内部实现是使用类似一维数组的方式(ziplist)来紧凑存储，以节约内存空间，而当成员数量较大时，才会使用hashmap的方式存储。</li>
+<li>key</li>
+<li>必须是一个字符串类型，不能包含边界字符，比如包括空格和换行\n等是被认为非法的，也不能包括redis协议中认定的特殊字符，如\r\n</li>
+<li>推荐key的写法是object-type:id:field，同时key不能太长，明显占内存</li>
+<li>List</li>
+<li>内部实现是使用一个双向链表，方便正向和反向进行查找</li>
+<li>Set</li>
+<li>内部实现也是一个HashMap，只是HashMap的value值永远为null</li>
+<li>set是不会有重复元素的，就是根据计算value的hash值进行快速排重</li>
+<li>set是无序的，不过可以通过sort命令进行二次排序，而且可以参照第三方的进行排序</li>
+<li>SortedSet</li>
+<li>内部使用HashMap和SkipList实现，skiplist用来存储value，其特点是查找快，节约存储空间。HashMap中存储的是value和score的映射关系</li>
+<li>自动排序，即放入其中后，根据score值自动排序，当你需要一个有序且不重复的集合的时候考虑使用sortedset</li>
+</ul>
+</li>
+</ul>
+<p>性能</p>
+<ul>
+<li>SortedSet 性能取决于其中存储的元素个数 </li>
+</ul>
+<p><img alt="" src="/theme/images/redis-sortedset.jpg"></p>
+<p>持久化</p>
+<ul>
+<li>
+<p>定时快照方式(snapshot)</p>
+<ul>
+<li>内部使用一个定时器，定期检查数据发生的改变次数和时间是否满足配置的持久化触发条件，如果满足就由操作系统fork一个子进程来执行持久化操作，即子进程就可以遍历整个内存空间进行存储，而此时父进程仍然提供正常的服务</li>
+<li>该方案的缺点是，存储的定时快照只是一段时间内的内存映像，重启后，上次快照存储后到重启这段时间内的内存数据会丢失</li>
+<li>每次做快照方式存储数据时，都会将整个内存数据重新保存一次，而不是增量存储</li>
+</ul>
+</li>
+<li>
+<p>基于语句追加文件的方式(aof)</p>
+<ul>
+<li>即append of file 方式，将每次使redis数据发生变化的语句都会被追加到一个log文件中，这个log文件即是持久化的数据</li>
+<li>缺点是数据量大的时侯，log文件体积过大，从而重启时，加载数据进入内存会非常缓慢，几十G的数据需要几个小时，因为每个命令都要执行一遍，另外，每个命令都要写log，redis读写性能也会下降</li>
+</ul>
+</li>
+<li>
+<p>虚拟内存(vm) — 放弃</p>
+</li>
+<li>disk store  — 实践中</li>
+<li>在持久化方案中，磁盘IO带来的问题<ul>
+<li>当使用的物理内存将要达到上限时，会发生redis崩溃的现象，这种情况原因是在读写持久化文件时会将该文件加载到内存中，从而内存中就会有2份重复的数据，导致操作系统让你的进程进行swap操作，此时开始不稳定甚至崩溃(现在已经有maxmemory-policy选项了)</li>
+<li>经验是 redis使用的物理内存达到内存总容量的3/5时就比较危险了</li>
+</ul>
+</li>
+</ul>
+<p>事务</p>
+<ul>
+<li>提供事务支持，可以保证一串命令操作的原子性，中间不会被其他命令打断，其实质是开启事务后(multi)，所有操作命令会放在一个队列中，然后一起执行，保证执行过程中不会被其他命令打断</li>
+<li>当这一串命令中某个命令发生错误时，事务终止，同时已经执行的命令不能进行回滚</li>
+<li>watch命令可以监视某个key，在调用watch命令后到exec执行，这段时间内如果这个key的值发生了变化，那么整个事务就会失败(乐观锁)</li>
+<li>在事务中，2个操作存在依赖关系，就要注意了，不能让一个写操作依赖一个读操作，因为事务中的操作并没有立即执行，在事务将操作命令加入队列过程中，有可能其他的客户端会操作这个key，也就是这个key并没有做任何的同步，所以我们需要使用watch来监视此key</li>
+<li>关于事务的应用请参考这篇文章</li>
+</ul>
+<p>适用场景</p>
+<ul>
+<li>朋友最近活动</li>
+<li>leader board 排行榜功能，在线游戏时，可以随时获取新的排行数据，通过ZRANG</li>
+<li>猜测可能认识的人，结合使用ZRANK和ZRANGE方法，可以查出与指定对象相似的对象出来</li>
+<li>关注数与被关注数</li>
+<li>计数：最近用户在页面间停顿时间不超过60秒的页面浏览量</li>
+<li>作为索引数据存储的结构，score存储为数值，value为对象id，使用ZRANGEBYSCORE检索一个确切的范围</li>
+</ul>
+<p>用作缓存</p>
+<ul>
+<li>
+<p>2种方式可以把redis当做缓存来使用</p>
+<ul>
+<li>给每个键设置一个固定的过期时间，但是这样内存也需要额外的空间来存储这些过期时间</li>
+<li>通过设置内存使用上限和指定内存策略算法<div class="highlight"><pre><span></span>maxmemory 2mb
+maxmemory-policy allkeys-lru
+</pre></div>
+
+
+</li>
+</ul>
+</li>
+<li>
+<p>相比使用额外内存空间存储多个键的过期时间，使用缓存设置是一种更加有效利用内存的方式。而且相比每个键固定的 过期时间，使用LRU也是一种更加推荐的方式，因为这样能使应用的热数据(更频繁使用的键) 在内存中停留时间更久。</p>
+</li>
+<li>基本上这么配置下的Redis可以当成memcached使用。当我们把Redis当成缓存来使用的时候，如果应用程序同时也需要把Redis当成存储系统来使用，那么强烈建议 使用两个Redis实例。一个是缓存，使用上述方法进行配置，另一个是存储，根据应用的持久化需求进行配置，并且 只存储那些不需要被缓存的数据。 </li>
+</ul>
+<p>Master Slave复制</p>
+<ul>
+<li>一个master可以有多个slave，而一个slave也可以连接其他的slave，形成图状结构</li>
+<li>master在与slave进行通信时，是可以继续处理客户端请求的；而slave在与master进行通信时，就会阻塞客户端的请求</li>
+<li>主从复制的场景，用于提高系统的伸缩性，即让slave负责读取操作，master负责写操作；或者也可以仅仅让slave作为冗余存储</li>
+<li>主从复制主要是分为2个步骤，第一个是同步数据，从master中把snapshot发送给slave，第二个是命令传播，master中的写操作都会传递给slave</li>
+<li>没有增量复制功能，只是用snapshot重建slave内存结构，新浪微薄版本的redis已经实现了增量复制功能</li>
+<li>每次slave重连master，master都会把shapshot重新发送给slave，重建内存数据结构(使用2.8版本+以上的psync命令，可以实现增量复制)</li>
+<li>可以通过主动复制来避免redis自身主从复制的缺点，既从客户端对存储的数据进行双写或者多写，数据的多份复制机制，可以避免单点失效故障</li>
+<li>这种主动复制功能的缺陷就是如何保证多个节点数据的一致性？需要引入一致性算法，但是这样也会降低写性能</li>
+<li>如果有多个slave发来同步命令，master后台只会启动一个进程来写snapshot，然后发送给所有的slave</li>
+<li>关于主从复制实现的详细步骤，可以参考黄健宏的视频和ppt</li>
+<li>master最好不要写snapshot，数据量大时会阻塞主线程运行</li>
+</ul>
+<p>可扩展集群</p>
+<ul>
+<li>100g的业务数据量，假设服务器内存是50g，那么根据磁盘io问题考虑，需要3-4台服务器存储</li>
+<li>当数据量达到这个级别时就需要考虑动态在线扩容的问题了</li>
+<li>拆分过程（presharding方案）<ul>
+<li>在新机器上启动好对应端口的Redis实例</li>
+<li>配置新端口为待迁移端口的从库</li>
+<li>待复制完成，与主库完成同步后，切换所有客户端配置到新的从库的端口</li>
+<li>配置从库为新的主库</li>
+<li>移除老的端口实例</li>
+<li>重复上述过程迁移好所有的端口到指定服务器上</li>
+</ul>
+</li>
+</ul>
+<p>使用总结</p>
+<ul>
+<li>根据业务需要选择合适的数据结构，为不同的使用场景设定不同的紧凑型存储参数</li>
+<li>当业务场景不需要进行数据持久化时，关闭所有的持久化参数，以获得最大的性能和内存使用量</li>
+<li>需要使用持久化时，根据业务特性，是否容忍数据丢失，从而选择aof或者snapshot方式中的一种，不要使用vm和diskstore</li>
+<li>不要使得redis实际内存使用量达到最大物理内存的3/5</li>
+<li>基于实际项目的一些建议</li>
+<li>持久化方案首选AOF方式</li>
+</ul>
+<p>改进思路</p>
+<ul>
+<li>可以做到按照AOF文件大小自动分割滚动</li>
+<li>实际项目可以采取与Mysql结合的方式，即mysql作为主库，Redis作为高速查询从库的异构读写分离的方案</li>
+</ul>
+<p><img alt="" src="/theme/images/redis-read.jpg"></p>
+<p>客户端、二次开发相关</p>
+<ul>
+<li>jedis，官方推荐java客户端</li>
+<li>客户端与spring集成 http://projects.spring.io/spring-data-redis/</li>
+</ul>
+    </div>
+
+
+</article>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="/theme/js/jquery.min.js"></script>
+    <script src="/theme/js/bootstrap.min.js"></script>
+
+    <!-- svg JavaScript================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script type="text/javascript" src="/theme/js/svg.jquery.js"></script>
+    <script type="text/javascript" src="/theme/js/pygal-tooltips.js"></script>
+
+  </body>
+</html>

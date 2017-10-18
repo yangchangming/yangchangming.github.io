@@ -38,6 +38,16 @@ header .article-title {
     color: #666;
 }
 
+img {
+    max-width:800px;
+    height:auto;
+
+    clear: both;
+    display: block;
+    margin:auto;
+}
+
+
 body {
  font-family: "Segoe UI", verdana,arial,sans-serif,"微软雅黑";
   background-color: #f0f0f0;
