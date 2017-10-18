@@ -24,7 +24,7 @@ header {
 
 }
 
-.article-info a {
+a {
     Text-Decoration: None;
     border-bottom: 1px dashed;
     Color: #018;
@@ -41,7 +41,6 @@ header .article-title {
 img {
     max-width:800px;
     height:auto;
-
     clear: both;
     display: block;
     margin:auto;
