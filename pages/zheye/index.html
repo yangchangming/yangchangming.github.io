@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="keywords" content="alerting, monitoring, alert, monitor">
+    <!-- disable auto fresh every 60 seconds -->
+    <!--
+    <meta http-equiv="refresh" content="60">
+    -->
+
+    <title>[者也]安装过程中填过的那些坑</title>
+    <link rel="stylesheet" href="/theme/css/bootstrap.min.css" >
+    <link rel="stylesheet" href="/theme/css/dashboard.css" >
+    <link rel="stylesheet" type="text/css" href="/theme/css/style.css" />
+
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+    <script src="/theme/js/html5shiv.js" type="text/javascript"></script>
+    <script src="/theme/js/respond.js" type="text/javascript"></script>
+    <![endif]-->
+
+  </head>
+
+  <body>
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <a class="navbar-brand" href="/">杨昌明的Blog </a>
+        </div>
+      </div>
+    </div>
+
+    <div  class="container-fluid">
+        <div class="row">
+            <div class="col-sm-12  col-md-12 main">
+                <div id="content">
+<article>
+    <header>
+        <h3 class="article-title">
+            [者也]安装过程中填过的那些坑
+            <!--<a href="/pages/zheye" rel="bookmark" title="Permalink to [者也]安装过程中填过的那些坑">[者也]安装过程中填过的那些坑</a>-->
+        </h3>
+        <hr/>
+        <div class="article-info">
+            日期:&nbsp;2014-03-13&nbsp;|&nbsp;关注我:&nbsp;<a href="http://weibo.com/changmingy" target="_blank">新浪微博</a>
+        </div>
+    </header>
+
+    <div class="article-content">
+        <p>【<a href="https://github.com/huacnlee/quora">者也</a>】是由<a href="https://github.com/huacnlee">@huacnlee</a>写的类似Quora的一个垂直问答社区，今天在本地安装过程中，填了一些坑，这篇文章不重点讲安装过程，而是说说安装过程中遇到的一些坑，希望对你有点帮助。</p>
+<p>最终应用跑起来如图所示</p>
+<p><img alt="" src="/theme/images/zheye.jpg"></p>
+<p>环境：Mac + RVM + brew</p>
+<p>先将工程clone下来。</p>
+<div class="highlight"><pre><span></span>$ git clone git://github.com/huacnlee/quora.git
+</pre></div>
+
+
+<p>然后，使用mac命令行工具brew相继安装了MongoDB2.4.9，node.js0.10.25，Redis2.8.3 这三个软件的版本都比官网上面要求的高，但是没有关系。</p>
+<div class="highlight"><pre><span></span>$ brew install mongodb node.js redis
+</pre></div>
+
+
+<p>安装过程</p>
+<p>ruby的版本
+首先确定你本机上面的ruby版本，我使用rvm进行ruby版本管理的，因为原来已经安装过ruby2.1.0这个版本，而官网上指定的是使用1.9.2，但是觉得高版本向下兼容，所以就在2.1.0这个版本下直接执行命令bundle来安装所有的gem包，结果不成功。</p>
+<div class="highlight"><pre><span></span>$ <span class="nb">cd</span> quora
+$ bundle install --path vendor/bundle
+</pre></div>
+
+
+<p>反复几次后，只好从rvm中删除掉2.1.0这个版本，然后重新安装1.9.2。</p>
+<div class="highlight"><pre><span></span>$ rvm uninstall <span class="m">2</span>.1.0
+$ rvm install <span class="m">1</span>.9.2
+</pre></div>
+
+
+<p>bundle的cache
+继续安装过程，执行bundle命令。</p>
+<p>bundle install --path vendor/bundle
+根据提示发现Gemfile中有个git仓库无法clone下来，打开Gemfile文件一看，原因是该htmldiff.git项目已经没有在huacnlee下了，可能他自己已经忘了这回事了，只好在github下搜索原作者的项目地址，修改为如下所示即可。</p>
+<div class="highlight"><pre><span></span>gem &quot;htmldiff&quot;, :git =&gt; &quot;git@github.com:myobie/htmldiff.git&quot;
+</pre></div>
+
+
+<p>再次执行bundle，又给一个错误提示，rake这个gem无法读取，一开始以为是权限问题，然后到bundle安装的指定目录vendor/bundle/ruby/1.9.1/cache下将该rake.gem文件加上全部的读写执行权限，但是还是失败。这个时候只有求助万能的Stackoverflow了，根据类似的问题，删除掉原来的cache目录(我是直接删掉了vendor/bundle这个目录)，然后重新执行bundle命令，一切ok，所有gem安装成功。估计问题原因是在原来的ruby 2.1.0 环境下，执行过一次bundle命令，导致cache中已经存在了一些gem文件。</p>
+<p>mongodb的配置
+接下来就是修改一些配置文件的问题了，如下</p>
+<div class="highlight"><pre><span></span>$ cp config/mongoid.yml.default config/mongoid.yml
+$ cp config/setting.yml.default config/setting.yml
+$ cp config/redis.yml.default config/redis.yml
+</pre></div>
+
+
+<p>redis.yml和setting.yml文件不需要修改，需要修改的是mongoid.yml文件，看其中有这样一行代码。</p>
+<div class="highlight"><pre><span></span><span class="n">uri</span><span class="o">:</span> <span class="n">mongodb</span><span class="o">://</span><span class="n">root</span><span class="o">:</span><span class="mi">666666</span><span class="err">@</span><span class="n">flame</span><span class="o">.</span><span class="na">mongohq</span><span class="o">.</span><span class="na">com</span><span class="o">:</span><span class="mi">27070</span><span class="o">/</span><span class="n">quora</span>
+</pre></div>
+
+
+<p>这是连接mongodb的url串，我们需要在mongodb中建立数据库quora和用户root，其密码是666666；建立成功后，执行命令启动应用。</p>
+<div class="highlight"><pre><span></span>$ script/rails s -e development_mongohq
+</pre></div>
+
+
+<p>报错，还是报错，是权限验证错误，对于我们这种在bug环境中长大的同志，这点问题还是可以解决的，经过排查发现是uri串中本地地址写错了，应该改为localhost，端口也应该改为27017，如下。</p>
+<div class="highlight"><pre><span></span><span class="n">uri</span><span class="o">:</span> <span class="n">mongodb</span><span class="o">://</span><span class="n">root</span><span class="o">:</span><span class="mi">666666</span><span class="err">@</span><span class="n">localhost</span><span class="o">:</span><span class="mi">27017</span><span class="o">/</span><span class="n">quora</span>
+</pre></div>
+
+
+<p>重新启动服务，一切OK！</p>
+    </div>
+
+
+</article>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="/theme/js/jquery.min.js"></script>
+    <script src="/theme/js/bootstrap.min.js"></script>
+
+    <!-- svg JavaScript================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script type="text/javascript" src="/theme/js/svg.jquery.js"></script>
+    <script type="text/javascript" src="/theme/js/pygal-tooltips.js"></script>
+
+  </body>
+</html>
