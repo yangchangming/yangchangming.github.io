@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="keywords" content="alerting, monitoring, alert, monitor">
+    <!-- disable auto fresh every 60 seconds -->
+    <!--
+    <meta http-equiv="refresh" content="60">
+    -->
+
+    <title>Linux常用命令汇总(持续更新)</title>
+    <link rel="stylesheet" href="/theme/css/bootstrap.min.css" >
+    <link rel="stylesheet" href="/theme/css/dashboard.css" >
+    <link rel="stylesheet" type="text/css" href="/theme/css/style.css" />
+
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+    <script src="/theme/js/html5shiv.js" type="text/javascript"></script>
+    <script src="/theme/js/respond.js" type="text/javascript"></script>
+    <![endif]-->
+
+  </head>
+
+  <body>
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <a class="navbar-brand" href="/" style="border-bottom: 0px;">杨昌明的Blog </a>
+        </div>
+      </div>
+    </div>
+
+    <div  class="container-fluid">
+        <div class="row">
+            <div class="col-sm-12  col-md-12 main">
+                <div id="content">
+<article>
+    <header>
+        <h3 class="article-title">
+            Linux常用命令汇总(持续更新)
+            <!--<a href="/pages/linux-command" rel="bookmark" title="Permalink to Linux常用命令汇总(持续更新)">Linux常用命令汇总(持续更新)</a>-->
+        </h3>
+        <hr/>
+        <div class="article-info">
+            日期:&nbsp;2012-11-13&nbsp;|&nbsp;关注我:&nbsp;<a href="http://weibo.com/changmingy" target="_blank">新浪微博</a>
+        </div>
+    </header>
+
+    <div class="article-content">
+        <p><strong>随手就来的命令</strong></p>
+<div class="highlight"><pre><span></span>$ lsof           列出系统所有打开的文件
+$ lsof /etc/     查看那些程序在使用某个目录
+$ lsof -i <span class="o">[</span><span class="m">46</span><span class="o">]</span> <span class="o">[</span>protocol<span class="o">][</span>@hostname<span class="p">|</span>hostaddr<span class="o">][</span>:service<span class="p">|</span>port<span class="o">]</span>      显示符合条件的进程情况
+$ lsof -i :22    查看某个端口在运行什么程序
+
+$ netstat -tupnl    查看当前系统监听端口和对应的程序，只针对 udp 和 tcp 协议
+$ runlevel 查看当前运行级别
+$ update-rc.d 设置某个服务是否启动在那个启动级别
+$ date -s     修改时间加 -s 参数
+$ cal     日历
+$ uptime 系统运行时间
+$ hwclock     查看系统时钟
+$ less 代上下翻页功能，与 more 类似，more 只能向下翻页
+$ head     查看文件头部，默认显示 <span class="m">10</span> 行
+$ tail -f     查看文件尾部，默认显示 <span class="m">10</span> 行，-f, 滚动输出
+$ lspci -v     查看硬件信息，-v 查询详细信息
+$ lsmod     查看加载的模块（驱动）
+$ lsusb     查看 usb 信息
+$ poweroff     立即关机
+$ reboot     立即重启计算机
+
+$ zip xxx.zip myfile    压缩文件为 xxx.zip
+$ unzip xxx.zip     解压文件
+
+$ tar -cvf     归档文件命令，只归档不压缩
+$ tar -xvf     解归档文件
+$ tar -cvzf     在进行归档的同时，也进行压缩 -- 最常用的命令
+
+$ locate keyword    查找文件，包含 keyword 关键字的文件, 查找的是默认的数据库
+$ updatedb     手动立即更新 locate 查找的数据库
+
+$ find 查找位置 参数 如 find . -name *xxx* 当前目录查找
+$ find / -name *.conf 根目录下查找
+$ find / -perm <span class="m">777</span> 所有权限是 <span class="m">777</span> 的文件
+$ find / -type d     文件类型来查找 d 代表是目录 l 代表是链接
+$ find . -name <span class="s2">&quot;a*&quot;</span> -exec ls -l <span class="o">{}</span> <span class="se">\;</span>
+
+$ grep keyword &lt; /etc/xxx <span class="o">(</span>some file<span class="o">)</span> 从某个路径的文件中查找关键字
+$ find / -user yang <span class="m">2</span>&gt; /dev/null <span class="p">|</span> grep keyword 将错误信息丢弃掉,/dev/null代表丢弃信息
+
+$ grep <span class="s1">&#39;keyword&#39;</span> /etc/passwd 查找关键字，在某个文件中
+    -i 忽略大小写
+    -n 显示结果所在行数
+    -v 输出不带关键字的行
+
+$ cut -d: -f1 /etc/passwd 基于分隔符冒号来以列的方式显示文本
+    -d 指定分隔符 默认是 tab 分隔符
+    -f 指定显示第几列
+    -c 基于字符进行切割 cut -c2-6 /etc/passwd 只显示第二到第六个字符
+
+$ wc     -lwcm     统计文本信息，结果包括行数 单词数 字节数 字符数
+$ sort - 不要称自己为程序员     对文本内容进行排序
+$ diff -ibu     比较 <span class="m">2</span> 个文本文件
+$ tr -d <span class="s1">&#39;TMD&#39;</span> &lt; file     删除或者转换大小写，将 file 文件中 <span class="s1">&#39;TMD&#39;</span> 关键字删除
+$ tr <span class="s1">&#39;a-z&#39;</span> <span class="s1">&#39;A-Z&#39;</span> &lt; file     转换为大写
+$ sed <span class="s1">&#39;s/linux/unix/g&#39;</span> file     文本查找并替换关键字，将 file 文件中的 linux 关键字替换为 unix，/g 参数代表同时替换多个
+$ sed <span class="s1">&#39;1,50s/linux/unix/g&#39;</span> file 从第一行到第 <span class="m">50</span> 行查找并替换
+$ sed -e <span class="s1">&#39;s/linux/unix/g&#39;</span> -e <span class="s1">&#39;s/xxx/ooo/g&#39;</span> file -e 参数代表可以同时指定多个关键字进行查找和替换
+
+$ service 服务名 <span class="o">[</span>start/stop/status<span class="o">]</span> 
+$ chkconfig 服务名 <span class="o">[</span>on/off/--list<span class="o">]</span>     设置服务在起动级别下是否启动
+
+$ dpkg -L 安装的软件名称 列出安装的软件所有文件在系统中目录的分布情况
+$ dpkg -l 列出系统中所有安装的包
+$ dpkg -l <span class="p">|</span> wc -l     统计所有安装的包
+$ dpkg -r --purge xxx     删除某软件包，xxx 代表已经安装到系统中软件包名称，不是源文件名称，--purge 代表配置文件同时删除
+$ dpkg -i xxx.deb     安装某软件包
+
+$ scp local_file remote_username@remote_host_ip: remote_file_path    复制本地文件到远程
+$ scp remote_username@remote_host_ip: remote_file_path  local_file_path    复制远程文件到本地
+
+$ ln -s    源文件位置 目标文件位置     建立链接，-s 代表建立软链接，软连接和硬链接都是同步更新的
+$ df -h     统计磁盘容量命令，-h 代表使用 m、g 等单位显示磁盘容量
+$ du -ahs 目录     统计目录下所有文件占用空间大小 -h 易读方式显示，-s 只统计目录所占总的大小，-a 显示目录及其所有子目录
+$ du / 目录 <span class="p">|</span> sort -nr <span class="p">|</span> more     对目录中每个文件占用空间按照从大到小进行排序显示
+$ cp /dev/cdrom/home/sunky/mydisk.iso 将光盘中的所有文件制作光盘镜像 iso 文件 <span class="o">(</span>mydisk.iso<span class="o">)</span>
+$ mkisofs -r -J -V mydisk xxx.iso xxx 目录     可以将 xxx 目录制作为镜像文件 xxx.iso，同时指定卷标为 mydisk
+$ mount xxx.iso / 目录     挂接某个 iso 文件到某个挂接点（就是一个目录），然后在这个目录中就可以访问镜像中文件
+$ mount –o <span class="nv">iocharset</span><span class="o">=</span>utf8 /dev/hda5/mnt/hda5 挂载 windows 下分区，到 /mnt/hda5 目录，-o <span class="nv">iocharset</span><span class="o">=</span>utf8 参数设定中文目录和文件
+$ sudo fdisk -l     查看硬盘信息
+</pre></div>
+
+
+<p><strong>Bash</strong></p>
+<div class="highlight"><pre><span></span>ctrl+w      删除最后一个单词
+ctrl+u      删除一行
+xargs
+pgrep pkill 
+nohup disown
+ctrl + z     将前台作业放至后台运行 -- 暂停状态，那么你就可以继续获取 shell 的控制权了
+ctrl + c     中断作业
+bg           将前台作业放至后台运行，处于运行状态
+fg           将后台作业放至前台继续运行
+jobs -rs     查看所有的后台运行作业以及其状态,r - 正在运行的作业，s - 正在暂停的作业
+xxx &amp;        某某任务后加上 &amp; 命令，在后台运行任务，你可以继续操作终端 shell
+ctrl + a,ctrl + e     在 命令行输入命令是，直接跳到命令行开头，直接跳到命令行结尾
+</pre></div>
+    </div>
+
+
+</article>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="/theme/js/jquery.min.js"></script>
+    <script src="/theme/js/bootstrap.min.js"></script>
+
+    <!-- svg JavaScript================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script type="text/javascript" src="/theme/js/svg.jquery.js"></script>
+    <script type="text/javascript" src="/theme/js/pygal-tooltips.js"></script>
+
+  </body>
+</html>
