@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="keywords" content="alerting, monitoring, alert, monitor">
+    <!-- disable auto fresh every 60 seconds -->
+    <!--
+    <meta http-equiv="refresh" content="60">
+    -->
+
+    <title>OS X 上安装GitLab全程指南</title>
+    <link rel="stylesheet" href="/theme/css/bootstrap.min.css" >
+    <link rel="stylesheet" href="/theme/css/dashboard.css" >
+    <link rel="stylesheet" type="text/css" href="/theme/css/style.css" />
+
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+    <script src="/theme/js/html5shiv.js" type="text/javascript"></script>
+    <script src="/theme/js/respond.js" type="text/javascript"></script>
+    <![endif]-->
+
+  </head>
+
+  <body>
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <a class="navbar-brand" href="/" style="border-bottom: 0px;">杨昌明的Blog </a>
+        </div>
+      </div>
+    </div>
+
+    <div  class="container-fluid">
+        <div class="row">
+            <div class="col-sm-12  col-md-12 main">
+                <div id="content">
+<article>
+    <header>
+        <h3 class="article-title">
+            OS X 上安装GitLab全程指南
+            <!--<a href="/pages/gitlab" rel="bookmark" title="Permalink to OS X 上安装GitLab全程指南">OS X 上安装GitLab全程指南</a>-->
+        </h3>
+        <hr/>
+        <div class="article-info">
+            日期:&nbsp;2014-05-05&nbsp;|&nbsp;关注我:&nbsp;<a href="http://weibo.com/changmingy" target="_blank">新浪微博</a>
+        </div>
+    </header>
+
+    <div class="article-content">
+        <p>其实想要安装一个<a href="https://github.com/gitlabhq/gitlabhq">GitLab</a>(开源代码版本控制程序，基于 Git) 服务并没有那么容易，特别是在 MAC 系统上，一个月前，我在机器上安装了一个，程序能够启动，但是代码始终不能提交，我参考的是这篇文章，后来放弃；直到上周末，为了去除心头这块阴影，把安装过的痕迹清除过后，准备重新来过，终于，整个过程同样的错误百出，但是最终以成功结束，代码成功提交，速度很快。</p>
+<p>我把 GitLab 服务作为系统内部的一个服务，开机后即可使用，这样，一些私有项目就可以用它来进行管理，而且还可以管理其他的内容，比如一些开发时工具的常用配置项，或者作为个人学习知识的进度控制平台等等，任你发挥。下面将安装过程完整记录下来，希望对你有用。</p>
+<p>下面这张图是首次登录 GitLab 后的截图：</p>
+<p><img alt="" src="/theme/images/gitlab.png"></p>
+<p><strong>安装环境</strong></p>
+<div class="highlight"><pre><span></span><span class="n">OS</span><span class="o">:</span> <span class="n">OS</span> <span class="n">X</span> <span class="mf">10.9</span><span class="o">.</span><span class="mi">4</span> <span class="o">(</span><span class="err">非</span> <span class="n">server</span><span class="o">)</span>
+<span class="n">Ruby</span><span class="o">:</span>  <span class="mf">2.0</span><span class="o">.</span><span class="mi">0</span><span class="n">p451</span> <span class="o">(</span><span class="mi">2014</span><span class="o">-</span><span class="mi">02</span><span class="o">-</span><span class="mi">24</span> <span class="n">revision</span> <span class="mi">45167</span><span class="o">)</span> <span class="o">[</span><span class="n">universal</span><span class="o">.</span><span class="na">x86_64</span><span class="o">-</span><span class="n">darwin13</span><span class="o">]</span> <span class="o">(</span><span class="err">系统自带</span><span class="o">)</span>
+<span class="n">Rails</span><span class="o">:</span> <span class="mf">4.1</span><span class="o">.</span><span class="mi">1</span>
+<span class="n">Git</span><span class="o">:</span> <span class="mf">1.8</span><span class="o">.</span><span class="mf">5.2</span> <span class="o">(</span><span class="n">Apple</span> <span class="n">Git</span><span class="o">-</span><span class="mi">48</span><span class="o">)</span>
+<span class="n">Redis</span><span class="o">:</span> <span class="mf">2.8</span><span class="o">.</span><span class="mi">3</span>
+<span class="n">Mysql</span><span class="o">:</span> <span class="n">Ver</span> <span class="mf">14.14</span> <span class="n">Distrib</span> <span class="mf">5.6</span><span class="o">.</span><span class="mi">19</span><span class="o">,</span> <span class="k">for</span> <span class="n">osx10</span><span class="o">.</span><span class="mi">7</span> <span class="o">(</span><span class="n">x86_64</span><span class="o">)</span> <span class="n">using</span>  <span class="n">EditLine</span> <span class="n">wrapper</span>
+<span class="n">GitLab</span><span class="o">:</span> <span class="mf">7.1</span><span class="o">.</span><span class="mi">1</span>
+</pre></div>
+
+
+<p><strong>安装过程</strong></p>
+<p>假定你使用 MAC 系统时已经安装了相关的命令行管理工具，包括 Homebrew，Xcode，如果没有请参考互联网。 </p>
+<p><strong>git 用户</strong></p>
+<p>在使用 gitlab 服务的时候，其实是通过系统的 git 用户的 SSH 连接，向服务端提交代码的，所有的 git 客户端都是通过服务器端的 git 用户，所以我们要先在本地建立一个 git 账号，并且让他加入 git 组，同时还要将其加入到 sudo 用户中去，这样在使用该账号登录使用过程中就可以进行一些 sudo 操作。</p>
+<p>首先使用非 git 账户登录系统，在该账号下我们建立 git 用户账号，可以通过【系统偏好设置】-&gt;【用户和群组】进行，但是其中不能建立组，所以我们可以通过命令行。</p>
+<p>建立用户组 git，并且设定唯一组编号 1050</p>
+<div class="highlight"><pre><span></span>sudo dscl . -create /Groups/git
+sudo dscl . -create /Groups/git PrimaryGroupID 1050
+</pre></div>
+
+
+<p>然后将 git 用户加入该组</p>
+<div class="highlight"><pre><span></span>sudo dscl . -create /Users/git PrimaryGroupID 1050
+</pre></div>
+
+
+<p>加入一行文本 <code>git ALL=(ALL) ALL</code> 即可</p>
+<p>git 用户建立好后，其主目录在 <code>/Users/git/</code> 下，下面的相关应用都会安装在这个目录下。(下面所有操作，建议全部在 git 账号登录 OS X 系统的情况下进行，这是一个强烈建议)</p>
+<p><strong>依赖的软件</strong></p>
+<p>将需要的一些软件库都安装好，通过 Homebrew 可以一键搞定，Git 和 Redis 也一起安装，如下：</p>
+<div class="highlight"><pre><span></span>brew install icu4c git logrotate redis libxml2 cmake
+</pre></div>
+
+
+<p>确定本机 python 的版本的是 2.5+，不要使用 3.x</p>
+<div class="highlight"><pre><span></span>python --version
+</pre></div>
+
+
+<p>做一个软链接，让 Gitlab 能够找到 python2 这个命令，这是个狗屁逻辑</p>
+<div class="highlight"><pre><span></span>sudo ln -s /usr/bin/python /usr/bin/python2
+</pre></div>
+
+
+<p>安装 python 的一些库</p>
+<div class="highlight"><pre><span></span>sudo easy_install pip
+sudo pip install pygments
+curl -O http://heanet.dl.sourceforge.net/project/docutils/docutils/0.11/docutils-0.11.tar.gz
+gunzip -c docutils-0.11.tar.gz | tar xopf -
+cd docutils-0.11
+sudo python setup.py install
+</pre></div>
+
+
+<p><strong>Mysql</strong></p>
+<p>mysql 的安装你可以通过源码或者 brew 进行或者 dmg 文件安装都可以，安装完毕后设为随系统启动，然后设置一下数据库。</p>
+<div class="highlight"><pre><span></span>mysql -u root -pPASSWORD_HERE
+CREATE USER &#39;git&#39;@&#39;localhost&#39; IDENTIFIED BY &#39;PASSWORD_HERE&#39;;
+CREATE DATABASE IF NOT EXISTS gitlabhq_production DEFAULT CHARACTER SET utf8 COLLATE utf8_unicode_ci;
+GRANT SELECT, LOCK TABLES, INSERT, UPDATE, DELETE, CREATE, DROP, INDEX, ALTER ON gitlabhq_production.* TO &#39;git&#39;@&#39;localhost&#39;;
+</pre></div>
+
+
+<p>下面测试下是否可以连接上 mysql 数据库</p>
+<div class="highlight"><pre><span></span>mysql -ugit -pPASSWORD_HERE -D gitlabhq_production
+</pre></div>
+
+
+<p><strong>Ruby</strong></p>
+<p>使用系统自带的 ruby 即可，OS X 默认安装的 ruby 是 2.0.0 版本，已经可以满足条件。</p>
+<p><strong>GitLab Shell</strong></p>
+<p>是一个支持客户端 SSH 访问 git 仓库的应用，通过它可以执行 git 命令，官网在<a href="https://github.com/gitlabhq/gitlab-shell">这里</a>。</p>
+<div class="highlight"><pre><span></span>cd /Users/git
+git clone https://github.com/gitlabhq/gitlab-shell.git
+cd gitlab-shell
+git checkout v1.9.7
+cp config.yml.example config.yml
+</pre></div>
+
+
+<p>配置 gitlab-shell，替换域名为你的域名，这里统一使用本机地址 localhost(这里的 sed 命令，在 mac 上可能需要使用 gsed，如果你已经安装了的话)</p>
+<div class="highlight"><pre><span></span>sed -i &quot;&quot;&quot;s/localhost/domain.com/&quot; config.yml
+</pre></div>
+
+
+<p>在替换 linux 系统下的主目录 home 为 max 系统下的 Users，同时要修改 redis-cli 客户端程序的路径</p>
+<div class="highlight"><pre><span></span>sed -i &quot;&quot;&quot;s/\/home\//\/Users\//g&quot; config.yml
+sed -i &quot;&quot;&quot;s/\/usr\/bin\/redis-cli/\/usr\/local\/bin\/redis-cli/&quot; config.yml
+</pre></div>
+
+
+<p><strong>开始安装 gitlab-shell</strong></p>
+<div class="highlight"><pre><span></span>./bin/install
+</pre></div>
+
+
+<p><strong>GitLab</strong></p>
+<p>主程序，开源，官网地址在<a href="https://github.com/gitlabhq/gitlabhq">这里</a>，我们选择的版本是当前的稳定版 7.1.1。</p>
+<div class="highlight"><pre><span></span>cd /Users/git
+git clone https://github.com/gitlabhq/gitlabhq.git  gitlab
+cd gitlab
+git checkout 7-1-stable
+</pre></div>
+
+
+<p><strong>配置 gitlab</strong></p>
+<div class="highlight"><pre><span></span>cp config/gitlab.yml.example config/gitlab.yml
+sed -i &quot;&quot;&quot;s/\/usr\/bin\/git/\/usr\/local\/bin\/git/g&quot; config/gitlab.yml
+sed -i &quot;&quot;&quot;s/\/home/\/Users/g&quot; config/gitlab.yml
+sed -i &quot;&quot;&quot;s/localhost/domain.com/g&quot; config/gitlab.yml
+</pre></div>
+
+
+<p>设置当前目录下 log/ 和 tmp/ 目录的可读写属性 (sudo 设置终于派上用处了)</p>
+<div class="highlight"><pre><span></span>sudo chown -R git log/
+sudo chown -R git tmp/
+sudo chmod -R u+rwX  log/
+sudo chmod -R u+rwX  tmp/
+</pre></div>
+
+
+<p>创建仓库目录 repositories, 这个目录就是用来存放你的工程代码的地方，同时确定该目录可以被 gitlab 读写</p>
+<div class="highlight"><pre><span></span>mkdir /Users/git/repositories
+sudo chmod -R u+rwX  /Users/git/repositories/
+</pre></div>
+
+
+<p>创建 gitlab-satellites 目录，也是用于存放工程代码相关的地方</p>
+<div class="highlight"><pre><span></span>mkdir /Users/git/gitlab-satellites
+</pre></div>
+
+
+<p>创建存放进程号和 socket 连接的目录</p>
+<div class="highlight"><pre><span></span>mkdir tmp/pids/
+mkdir tmp/sockets/
+sudo chmod -R u+rwX  tmp/pids/
+sudo chmod -R u+rwX  tmp/sockets/
+</pre></div>
+
+
+<p>创建公共文件上传目录，可以先检查下，如果已经存在就不用在建立了</p>
+<div class="highlight"><pre><span></span>mkdir public/uploads
+sudo chmod -R u+rwX  public/uploads
+</pre></div>
+
+
+<p>再将仓库目录的归属重新设置一次，放入 git 组中</p>
+<div class="highlight"><pre><span></span>sudo chown -R git:git /Users/git/repositories/
+sudo chmod -R ug+rwX,o-rwx /Users/git/repositories/
+sudo chmod -R ug-s /Users/git/repositories/
+sudo find /Users/git/repositories/ -type d -print0 | sudo xargs -0 chmod g+s
+</pre></div>
+
+
+<p>下面需要对 unicorn 的配置文件进行修改，主要还是修改 home 目录为 max 下的 Users 目录 (unicorn 是 rails 应用的 web 容器，类似于 webrick)</p>
+<div class="highlight"><pre><span></span>cp config/unicorn.rb.example config/unicorn.rb
+sudo -u git sed -i &quot;&quot;&quot;s/\/home/\/Users/g&quot; config/unicorn.rb
+</pre></div>
+
+
+<p>把下面这行注释掉，在 <code>config/unicorn.rb</code> 文件中</p>
+<div class="highlight"><pre><span></span>listen &quot;/Users/git/gitlab/tmp/sockets/gitlab.socket&quot;, :backlog =&gt; 64
+</pre></div>
+
+
+<p>设置 rack_attack 中间件，这个东西是用于保护你的 web 应用，防止一些攻击请求</p>
+<div class="highlight"><pre><span></span>cp config/initializers/rack_attack.rb.example config/initializers/rack_attack.rb
+</pre></div>
+
+
+<p>设置 logrotate 配置文件，用于整理你的 web 应用的 log 日志的</p>
+<div class="highlight"><pre><span></span>sudo mkdir /etc/logrotate.d/
+sudo cp lib/support/logrotate/gitlab /etc/logrotate.d/gitlab
+sudo sed -i &quot;&quot;&quot;s/\/home/\/Users/g&quot; /etc/logrotate.d/gitlab
+</pre></div>
+
+
+<p>设置 git 的全局变量，用户名和邮箱设置你自己常用的即可</p>
+<div class="highlight"><pre><span></span>git config --global user.name &quot;GitLab&quot;
+git config --global user.email &quot;gitlab@domain.com&quot;
+</pre></div>
+
+
+<p>设置连接 mysql 数据库的配置</p>
+<div class="highlight"><pre><span></span>cp config/database.yml.mysql config/database.yml
+sed -i &quot;&quot;&quot;s/secure password/PASSWORD_HERE/g&quot; config/database.yml
+</pre></div>
+
+
+<p><strong>安装 Gem 包</strong></p>
+<p>gitlab 配置好后，如果整个 ruby 没有 gem 包，gitlab 也没有办法跑起来。rails3.0 版本后使用 bundle 进行管理 gem，不在是原来的所有 gem 都安装在系统目录中（/Library/Ruby/Gems/2.0.0/gems），而是通过 bundle，依赖配置文件进行安装，安装后的目录是在工程目录下，不会在污染系统目录，但是首先我们需要使用传统方式来安装 bundler 这个 gem 包。</p>
+<div class="highlight"><pre><span></span>sudo gem install bundler
+</pre></div>
+
+
+<p>你可以用 gem list 查看下是否以及安装好 bundler。不要使用 rvm 来管理你的 ruby 版本，因为在 gitlab 启动时，可能无法识别 rvm 中的那个版本 ruby。另外，需要将 bundle 所依赖的配置文件 Gemfile 和 Gemfile.lock 中的 underscore-rails 版本修改为 1.5.2。下面开始安装。</p>
+<div class="highlight"><pre><span></span>sudo bundle install --deployment --without development test postgres aws
+</pre></div>
+
+
+<p>如果一切 ok，那么恭喜你了，这一步很重要。安装 gem 包过程可能由于网络原因失败，那么可以修改下 Gemfile 文件的第一行 gem 文件的地址为国内的<a href="https://ruby.taobao.org/">淘宝镜像</a>。如果发生了 nokogiri 相关的安装错误，请参考<a href="https://github.com/WebEntity/Installation-guide-for-GitLab-on-OS-X#7-install-gitlab-shell">这里</a>。</p>
+<p>数据库初始化 (需要先将 redis 服务启动，端口默认 6379，不要修改)</p>
+<div class="highlight"><pre><span></span>bundle exec rake gitlab:setup RAILS_ENV=production
+</pre></div>
+
+
+<p>执行成功后，会提示出现 gitlab 系统登录的默认用户名和密码。</p>
+<p>login………root
+password......5iveL!fe </p>
+<p>预编译 assets</p>
+<div class="highlight"><pre><span></span>bundle exec rake assets:precompile RAILS_ENV=production
+</pre></div>
+
+
+<p><strong>启动 gitlab</strong></p>
+<p>通过以上漫长的操作后，如果没有倒下的话，说明你成功在望了，下面就可以启动 gitlab 应用了，为了方便，我们将 gitlab 的启动和一些后台服务设置为系统服务项，自动启动。上文中有提过 unicorn 这个 web 服务器的，启动它就可以启动 gitlab 服务了。</p>
+<div class="highlight"><pre><span></span>sudo curl --output /Library/LaunchDaemons/gitlab.web.plist https://raw.githubusercontent.com/CiTroNaK/Installation-guide-for-GitLab-on-OS-X/master/gitlab.web.plist
+sudo launchctl load /Library/LaunchDaemons/gitlab.web.plist
+sudo curl --output /Library/LaunchDaemons/gitlab.background_jobs.plist https://raw.githubusercontent.com/CiTroNaK/Installation-guide-for-GitLab-on-OS-X/master/gitlab.background_jobs.plist
+sudo launchctl load /Library/LaunchDaemons/gitlab.background_jobs.plist
+</pre></div>
+
+
+<p>以上命令成功执行后，如果没有问题，那么你的 gitlab 应用就已经可以访问了，打开浏览器输入<code>http://localhost:8080</code>，按下回车，你的爱机给了你一个如下提示 (后台输出的错误)：</p>
+<div class="highlight"><pre><span></span>app error: Missing 
+secret_key_base
+for &#39;production’ environment
+</pre></div>
+
+
+<p>这是 Rails4.1 的新功能导致的，解决方案如下：</p>
+<div class="highlight"><pre><span></span>cd /Users/git/gitlab
+cp vendor/bundle/ruby/2.0.0/gems/railties-4.1.1/lib/rails/generators/rails/app/templates/config/secrets.yml config/
+</pre></div>
+
+
+<p>拷贝 secret_token.rb 文件中已经存在的 secret_key 到该文件下，看看这里的建议：</p>
+<p><code>you can simply copy the existing secret_key_base from the secret_token.rb initializer to secrets.yml under the production section, replacing '&lt;%= ENV["SECRET_KEY_BASE"] %&gt;'</code></p>
+<p>然后在该 secrets.yml 文件中，将 development 和 test 模式下的 secret_key_base 置为空即可。再次通过浏览器访问，用 root 用户登录，一切 OK！</p>
+<p><strong>最后的检查</strong></p>
+<p>你以为你已经安装好了，其实，其实未必，我们使用命令给 gitlab-shell 做个全面的体检</p>
+<div class="highlight"><pre><span></span>cd /Users/git/gitlab-shell/
+./bin/check
+</pre></div>
+
+
+<p>控制台提示如下：</p>
+<p><code>Check GitLab API access:
+Network is unreachable - connect(2) (Errno::ENETUNREACH)</code></p>
+<p>解决方案是，有三个配置文件的 ip 地址端口要保持一致。</p>
+<p><code>/Users/git/gitlab/config/unicorn.rb：配置 ruby 提供的服务端口，ip          //40 行
+/Users/git/gitlab/config/gitlab.yml：配置 gitlab 服务的端口，ip            //18 行
+/Users/git/gitlab-shell/config.yml：配置 gitlab-shell 要调用的 API 接口    //5 行</code></p>
+<p>再次检查，成功提示如下图：</p>
+<p><img alt="" src="/theme/images/gitlab-check.png"></p>
+<p>最后对 gitlab 应用做个彻底检查。</p>
+<div class="highlight"><pre><span></span>bundle exec rake gitlab:check RAILS_ENV=production
+</pre></div>
+
+
+<p>会给出一些关于脚本的错误提示信息，忽略掉，因为我们修改了 home 目录为 Users 目录。至此，GitLab 安装完毕。</p>
+<p><strong>附录：SSH 登录相关</strong></p>
+<p>所有 gitlab 用户都是通过同一个 git 用户进行 ssh 登陆 gitlab 服务器的，不同的只是各自的 ssh key 不同而已，进行区分，gitlab 应用的注册用户和 ssh 登陆 gitlab 服务器的 git 用户，完全是 2 个不同的用户</p>
+<p>gitlab 中的用户 ssh key 的内容其实是你本机上面的对应的公钥内容，这样的话，你用 git 用户通过 ssh 登录 gitlab 服务器时，就会拿 ssh key 和你本机上的对应的私钥进行匹配，以区分用户，成功的话就可以进行 git 相关操作了，另外，本机上的 ssh 登录时设置的域名要对应上服务器设置的 localhost</p>
+<p>不能在一台机器上面同时存在 2 个用户登陆同一个 gitlab 服务，没有办法区分他们 ssh 的密钥文件，并且不好区分 gitlab 服务器地址</p>
+    </div>
+
+
+</article>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="/theme/js/jquery.min.js"></script>
+    <script src="/theme/js/bootstrap.min.js"></script>
+
+    <!-- svg JavaScript================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script type="text/javascript" src="/theme/js/svg.jquery.js"></script>
+    <script type="text/javascript" src="/theme/js/pygal-tooltips.js"></script>
+
+  </body>
+</html>
