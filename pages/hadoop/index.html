@@ -50,16 +50,316 @@
     </header>
 
     <div class="article-content">
-        <p>服务器环境准备：</p>
-<div class="highlight"><pre><span></span>操作系统设置项
+        <p>基本的硬件组装完成后，需要安装hadoop，目前有好几个版本可供选择，我选择的是较低的一个版本，而且是手动安装，具体下载链接请去官网寻找。在安装之前，先做好hadoop平台规划，那个节点是主节点，那个是从节点，机器名统一，做到见名知意。</p>
+<h3>服务器环境准备</h3>
+<h4>ssh免密码登录</h4>
+<p>在主从节点通信时，通过ssh时需要验证密码，我们需要设置免密码的方式进行通讯。包括master到所有slave免密码，master到master自身需要免密码，具体设置方式请看以前的一篇文章。另外，在所有节点的hosts中配置好所有节点和机器名的对应关系。</p>
+<h4>关闭防火墙和selinux</h4>
+<div class="highlight"><pre><span></span>systemctl status  firewalld.service
+systemctl stop firewalld.service
+systemctl disable firewalld.service
 
-    ssh免密码登录
-    关闭防火墙
-    关闭selinux
-    安装iptables
-    安装各个计算节点的ntp服务
-    设置linux系统最大打开文件数目
-    支持文件压缩功能，安装snappy环境
+设置selinux为disable    /et/selinux/config
+</pre></div>
+
+
+<h4>配置ntp服务</h4>
+<p>所有节点需要同步时间，保证软件的工作正常，安装ntp服务</p>
+<div class="highlight"><pre><span></span>yum -y install ntp
+systemctl enable ntpd
+systemctl start ntpd
+timedatectl set-timezone Asia/Shanghai
+timedatectl set-ntp yes
+systemctl restart ntpd
+ntpq -p
+</pre></div>
+
+
+<h4>linux文件打开数目</h4>
+<p>在使用hbase时会打开很多文件，所有节点需要设置linux系统本身支持的文件打开数，同时还要设置hadoop组件的进程数目。</p>
+<div class="highlight"><pre><span></span>* soft nofile 1000000
+* hard nofile 1000000
+hdfs - nofile 32768
+mapred - nofile 32768
+hbase - nofile 32768
+hive - nproc 32768
+yarn - nproc 32768
+storm - nproc 32768
+</pre></div>
+
+
+<h4>文件压缩配置</h4>
+<p>hbase或者hadoop存储数据时支持多种压缩，可以使用命令<code>hadoop checknative -a</code> 来检查支持的压缩方式。其中使用snappy压缩时，需要os支持，所以要先在os中安装好snappy功能。具体的linux安装snappy和配置过程还是比较麻烦的，参考<a href="http://blog.cheyo.net/197.html">这里</a>和<a href="http://www.cnblogs.com/shitouer/archive/2013/01/14/2859475.html">这里</a>。</p>
+<h4>linux环境变量</h4>
+<p>在系统的环境配置文件(/etc/profile)中设置好所有hadoop的环境变量，包括java环境变量，供各个组件使用</p>
+<div class="highlight"><pre><span></span>export JAVA_HOME=/usr/java/jdk1.8.0_121
+export HADOOP_HOME=/opt/hadoop-2.5.2
+export HADOOP_COMMON_HOME=$HADOOP_HOME
+export HADOOP_HDFS_HOME=$HADOOP_HOME
+export HADOOP_MAPRED_HOME=$HADOOP_HOME
+export HADOOP_YARN_HOME=$HADOOP_HOME
+export HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop
+export HBASE_HOME=/opt/hbase-0.98.9-hadoop2
+export CLASSPATH=.:$JAVA_HOME/lib:$HADOOP_HOME/lib:$CLASSPATH
+export PATH=$JAVA_HOME/bin:$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$HBASE_HOME/bin:$PATH
+export SPARK_HOME=/opt/spark-1.6.3
+export PATH=$PATH:$SPARK_HOME/bin:$SPARK_HOME/sbin
+</pre></div>
+
+
+<h3>hadoop</h3>
+<p>下载的hadoop以及其他软件都放在/opt目录下，然后进入目录/opt/hadoop-2.5.2/etc下，配置相关文件</p>
+<p>slaves
+    填写所有的从节点机器名</p>
+<p>core-site.xml
+    填写hdfs协议的地址和端口<code>hdfs://ibdp-00:9000</code>，属性名为<code>fs.defaultFS</code>；还有压缩项的配置<code>io.compression.codecs</code></p>
+<div class="highlight"><pre><span></span><span class="nt">&lt;configuration&gt;</span>
+  <span class="nt">&lt;property&gt;</span>
+  <span class="nt">&lt;name&gt;</span>fs.defaultFS<span class="nt">&lt;/name&gt;</span>
+  <span class="nt">&lt;value&gt;</span>hdfs://ibdp-00:9000<span class="nt">&lt;/value&gt;</span>
+  <span class="nt">&lt;/property&gt;</span>
+  <span class="nt">&lt;property&gt;</span>
+  <span class="nt">&lt;name&gt;</span>io.compression.codecs<span class="nt">&lt;/name&gt;</span>
+  <span class="nt">&lt;value&gt;</span>
+  org.apache.hadoop.io.compress.GzipCodec,
+  org.apache.hadoop.io.compress.DefaultCodec,
+  org.apache.hadoop.io.compress.BZip2Codec,
+  org.apache.hadoop.io.compress.SnappyCodec
+  <span class="nt">&lt;/value&gt;</span>
+  <span class="nt">&lt;/property&gt;</span>
+<span class="nt">&lt;/configuration&gt;</span>
+</pre></div>
+
+
+<p>hdfs-site.xml
+    配置好hdfs的备份份数和namenode和datanode的存储目录，以及开启webhdfs功能</p>
+<div class="highlight"><pre><span></span><span class="nt">&lt;configuration&gt;</span>
+    <span class="nt">&lt;property&gt;</span>
+        <span class="nt">&lt;name&gt;</span>dfs.replication<span class="nt">&lt;/name&gt;</span>
+        <span class="nt">&lt;value&gt;</span>1<span class="nt">&lt;/value&gt;</span>
+    <span class="nt">&lt;/property&gt;</span>
+    <span class="nt">&lt;property&gt;</span>
+        <span class="nt">&lt;name&gt;</span>dfs.namenode.name.dir<span class="nt">&lt;/name&gt;</span>
+        <span class="nt">&lt;value&gt;</span>file:/home/dfs/name<span class="nt">&lt;/value&gt;</span>
+    <span class="nt">&lt;/property&gt;</span>
+    <span class="nt">&lt;property&gt;</span>
+        <span class="nt">&lt;name&gt;</span>dfs.datanode.data.dir<span class="nt">&lt;/name&gt;</span>
+        <span class="nt">&lt;value&gt;</span>file:/home/dfs/data<span class="nt">&lt;/value&gt;</span>
+    <span class="nt">&lt;/property&gt;</span>
+    <span class="nt">&lt;property&gt;</span>
+        <span class="nt">&lt;name&gt;</span>dfs.webhdfs.enabled<span class="nt">&lt;/name&gt;</span>
+        <span class="nt">&lt;value&gt;</span>true<span class="nt">&lt;/value&gt;</span>
+    <span class="nt">&lt;/property&gt;</span>
+    <span class="c">&lt;!-- Specifies the maximum number of threads to use for transferring data in and out of the DN. --&gt;</span>
+    <span class="nt">&lt;property&gt;</span>
+      <span class="nt">&lt;name&gt;</span>dfs.datanode.max.transfer.threads<span class="nt">&lt;/name&gt;</span>
+      <span class="nt">&lt;value&gt;</span>8192<span class="nt">&lt;/value&gt;</span>
+    <span class="nt">&lt;/property&gt;</span>
+<span class="nt">&lt;/configuration&gt;</span>
+</pre></div>
+
+
+<p>yarn-env.sh
+    主要是配置好<code>java_home</code>这个环境变量，其他不动</p>
+<div class="highlight"><pre><span></span>export JAVA_HOME=/usr/java/jdk1.8.0_121
+</pre></div>
+
+
+<p>yarn-site.xml
+    主要配置资源管理器yarn主节点相关</p>
+<div class="highlight"><pre><span></span><span class="nt">&lt;property&gt;</span>
+    <span class="nt">&lt;name&gt;</span>yarn.resourcemanager.address<span class="nt">&lt;/name&gt;</span>
+    <span class="nt">&lt;value&gt;</span>ibdp-00:8032<span class="nt">&lt;/value&gt;</span>
+<span class="nt">&lt;/property&gt;</span>
+<span class="nt">&lt;property&gt;</span>
+    <span class="nt">&lt;name&gt;</span>yarn.resourcemanager.scheduler.address<span class="nt">&lt;/name&gt;</span>
+    <span class="nt">&lt;value&gt;</span>ibdp-00:8030<span class="nt">&lt;/value&gt;</span>
+<span class="nt">&lt;/property&gt;</span>
+<span class="nt">&lt;property&gt;</span>
+    <span class="nt">&lt;name&gt;</span>yarn.resourcemanager.resource-tracker.address<span class="nt">&lt;/name&gt;</span>
+    <span class="nt">&lt;value&gt;</span>ibdp-00:8031<span class="nt">&lt;/value&gt;</span>
+<span class="nt">&lt;/property&gt;</span>
+<span class="nt">&lt;property&gt;</span>
+    <span class="nt">&lt;name&gt;</span>yarn.resourcemanager.admin.address<span class="nt">&lt;/name&gt;</span>
+    <span class="nt">&lt;value&gt;</span>ibdp-00:8033<span class="nt">&lt;/value&gt;</span>
+<span class="nt">&lt;/property&gt;</span>
+<span class="nt">&lt;property&gt;</span>
+    <span class="nt">&lt;name&gt;</span>yarn.resourcemanager.webapp.address<span class="nt">&lt;/name&gt;</span>
+    <span class="nt">&lt;value&gt;</span>ibdp-00:8088<span class="nt">&lt;/value&gt;</span>
+<span class="nt">&lt;/property&gt;</span>
+</pre></div>
+
+
+<p>hadoop-env.sh
+    主要配置java_home</p>
+<div class="highlight"><pre><span></span>export JAVA_HOME=/usr/java/jdk1.8.0_121
+</pre></div>
+
+
+<p>配置好后，拷贝目录到所有slave的相同目录下即可，然后开始第一次格式化所有节点的hdfs</p>
+<div class="highlight"><pre><span></span>cd /opt/hadoop/bin/ 
+./hdfs  namenode -format
+</pre></div>
+
+
+<p>在安装过程中可能会反复这个步骤，那就需要清空hdfs的数据，如下</p>
+<div class="highlight"><pre><span></span>清空配置的namenode和datanode目录下所有数据
+清空/tmp下hadoop目录中的临时数据
+清空zookeeper中/opt/zookeeper-data/version-2目录下所有数据，该目录存储了zookeeper的数据
+</pre></div>
+
+
+<p>启动hadoop命令比较简单，在master上直接执行一条命令即可，会启动所有slave节点的hadoop组件</p>
+<div class="highlight"><pre><span></span>./opt/hadoop-2.5.2/sbin/start-all.sh
+</pre></div>
+
+
+<p>通过命令jps可以查看hadoop的组件是否已经安装完成</p>
+<div class="highlight"><pre><span></span>slave：
+6176 NodeManager
+5339 DataNode
+master：
+5603 SecondaryNameNode
+5174 NameNode
+5820 ResourceManager
+</pre></div>
+
+
+<p>在hadoop维护过程中，会需要重启单个节点的服务，比如namenode服务挂掉，或者datanode服务挂掉</p>
+<div class="highlight"><pre><span></span>./opt/hadoop-2.5.2/sbin/yarn-daemon.sh start nodemanager
+./opt/hadoop-2.5.2/sbin/hadoop-daemon.sh start datanode
+</pre></div>
+
+
+<h3>zookeeper</h3>
+<p>虽然hadoop本身是不需要zookeeper支持的，但是后面我们数据存储选择了hbase，hbase自身携带的zk服务我们不需要，所以需要一个统一的zk服务，支持集群，以保证整个大数据平台的zk服务的稳定性。zk集群需要奇数位的节点，我们选择3个节点部署zk集群。</p>
+<p>同样，zookeeper下载后，统一放在/opt目录下，然后进行配置，主要配置文件为zoo.cfg，配置通信节点和数据保存目录。</p>
+<div class="highlight"><pre><span></span>server.1=ibdp-01:2888:3888
+server.2=ibdp-02:2888:3888
+server.3=ibdp-03:2888:3888
+
+dataDir=/opt/zookeeper-data
+clientPort=2181
+</pre></div>
+
+
+<p>在<code>/opt/zookeeper-data/</code>目录下增加文件myid， 内容为zk节点值，即server.后面的数值。然后拷贝到其他两个节点，每个节点分别启动，命令如下</p>
+<div class="highlight"><pre><span></span>./opt/zookeeper-3.4.9/bin/zkServer.sh start
+</pre></div>
+
+
+<p>zk服务决定了整个集群的数据一致性，特别对于hbase的数据，其中region数据等等的一致性都是通过zk来保存的，如果一旦hbase出现问题，请先清空zk中的hbase目录数据，重新启动hbase即可重新写入zk。日常维护zk，使用命令行即可。</p>
+<div class="highlight"><pre><span></span>./opt/zookeeper-3.4.9/bin/zkCli.sh -server 192.168.3.201:2181,192.168.3.202:2181,192.168.3.203:2181
+</pre></div>
+
+
+<p>另外zk的日志很大，需要定时清理，如果手动清理的话，可以使用命令保留最近几日的数据。通过jps可以查看到zk服务的进程<code>QuorumPeerMain</code></p>
+<div class="highlight"><pre><span></span>./bin/zkCleanup.sh -n 5
+</pre></div>
+
+
+<h3>hbase</h3>
+<p>hbase我们使用zk集群提供服务，并且hbase是依赖hdfs的，配置位于<code>/opt/hbase-0.98.9-hadoop2/conf</code>下。对于hbase和zookeeper服务紧密结合在一起的，所有的表和region信息都存储在zk中，如果hbase出现一致性问题，请先删除zk中的相应目录数据，参考上面部分如何删除。</p>
+<p>hbase-site.xml
+    配置依赖的hdfs地址和zk服务</p>
+<div class="highlight"><pre><span></span><span class="nt">&lt;property&gt;</span>
+  <span class="nt">&lt;name&gt;</span>hbase.rootdir<span class="nt">&lt;/name&gt;</span>
+  <span class="nt">&lt;value&gt;</span>hdfs://ibdp-00:9000/hbase<span class="nt">&lt;/value&gt;</span>
+<span class="nt">&lt;/property&gt;</span>
+
+<span class="nt">&lt;property&gt;</span>
+  <span class="nt">&lt;name&gt;</span>hbase.cluster.distributed<span class="nt">&lt;/name&gt;</span>
+  <span class="nt">&lt;value&gt;</span>true<span class="nt">&lt;/value&gt;</span>
+<span class="nt">&lt;/property&gt;</span>
+
+<span class="nt">&lt;property&gt;</span>
+  <span class="nt">&lt;name&gt;</span>hbase.zookeeper.property.clientPort<span class="nt">&lt;/name&gt;</span>
+  <span class="nt">&lt;value&gt;</span>2181<span class="nt">&lt;/value&gt;</span>
+<span class="nt">&lt;/property&gt;</span>
+
+<span class="nt">&lt;property&gt;</span>
+  <span class="nt">&lt;name&gt;</span>hbase.zookeeper.property.dataDir<span class="nt">&lt;/name&gt;</span>
+  <span class="nt">&lt;value&gt;</span>/opt/zookeeper-data<span class="nt">&lt;/value&gt;</span>
+<span class="nt">&lt;/property&gt;</span>
+
+<span class="nt">&lt;property&gt;</span>
+  <span class="nt">&lt;name&gt;</span>hbase.zookeeper.quorum<span class="nt">&lt;/name&gt;</span>
+  <span class="nt">&lt;value&gt;</span>ibdp-01,ibdp-02,ibdp-03<span class="nt">&lt;/value&gt;</span>
+<span class="nt">&lt;/property&gt;</span>
+</pre></div>
+
+
+<p>hbase-env.sh
+    配置是否需要使用自带的zk服务和java_home</p>
+<div class="highlight"><pre><span></span>export HBASE_MANAGES_ZK=false
+export JAVA_HOME=/usr/java/jdk1.8.0_121
+</pre></div>
+
+
+<p>hbase正常使用前提是，指定了zk服务和压缩功能的设置，以及os的文件数目设置，前文中已经提及snappy的配置，请自行参考。启动hbase通过master即可，在master上一个命令所有slave即启动</p>
+<div class="highlight"><pre><span></span>./opt/hbase-0.98.9-hadoop2/bin/start-hbase.sh
+</pre></div>
+
+
+<p>我们在使用hbase时是通过python的客户端进行操作的，需要打开hbase的thrift服务，命令如下</p>
+<div class="highlight"><pre><span></span>./opt/hbase-0.98.9-hadoop2/bin/hbase-daemon.sh start thrift
+</pre></div>
+
+
+<p>如果某个regionserver挂点，需要单独启动，用如下命令</p>
+<div class="highlight"><pre><span></span>/bin/hbase-daemon.sh start regionserver
+</pre></div>
+
+
+<p>jps查看hbase进程，可以看到</p>
+<div class="highlight"><pre><span></span><span class="n">master</span><span class="o">:</span>
+<span class="mi">7092</span> <span class="n">HMaster</span>
+<span class="n">slave</span><span class="o">:</span>
+<span class="mi">7072</span> <span class="n">HRegionServer</span>
+</pre></div>
+
+
+<h3>kafka</h3>
+<p>为了实时接收交易所的行情数据，先把数据存储在kafka中，然后在进行处理写库。同样搭建kafka集群保证接收行情数据第一关不会出问题，搭建3个节点的集群，使用大数据平台的zk服务。配置文件位于<code>/opt/kafka_2.12-0.10.2.0/config</code>下。</p>
+<p>server.properties
+    配置kafka数据目录，zk服务地址等</p>
+<div class="highlight"><pre><span></span>advertised.host.name=192.168.3.202           # 每个节点ip都不同
+advertised.host.port=9092                    # 每个节点端口保持一致
+broker.id=0                                  # 每个节点broken id不同            
+log.dirs=/home/kafka-data                    # 数据保存位置
+num.partitions=3                             # 每个topic保留3分，总共3个节点
+log.retention.hours=168                      # 数据保存时间
+zookeeper.connect=192.168.3.201:2181,192.168.3.202:2181,192.168.3.203:2181
+default.replication.factor=3
+</pre></div>
+
+
+<p>使用外部的zk服务时，zookeeper.properties中的dataDir配置失效。在维护kafka的过程中，有时需要删除topic的数据，而且是所有的数据，步骤如下</p>
+<div class="highlight"><pre><span></span>停止kafka
+停止所有的生产者和消费者程序，如果不停止很可能删除topic后又被惯回来
+删除某一个zk节点，如rmr /brokers/topics，其他节点中的相应目录自动同步删除
+删除kafka安装目录中的server.properties中的log.dirs配置目录中的所有数据
+重启kafka ./bin/kafka-server-start.sh -daemon config/server.properties
+</pre></div>
+
+
+<p>启动kafka后，用jps会查看到kafka进程。</p>
+<p>以上是hadoop平台搭建的主要配置，就单个组件的配置来说还有很多可配置的地方，请参考官方文档。在启动所有组件时，安装如下顺序启动，命令如下</p>
+<div class="highlight"><pre><span></span>hadoop集群
+./sbin/start-all.sh
+./sbin/stop-all.sh
+
+Zookeeper集群
+./zkServer.sh start
+
+kafka集群
+./bin/kafka-server-start.sh -daemon config/server.properties
+
+hbase集群
+./bin/start-hbase.sh
+
+thrift(主节点上)
+./hbase-daemon.sh start thrift
 </pre></div>
     </div>
 
