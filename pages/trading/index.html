@@ -60,7 +60,7 @@ A: 每个因素的权重 - 系数</p>
 <p><strong>因子</strong>计算基于历史行情的价格数据和成交量数据得出，如下公式：</p>
 <p><img alt="" src="/theme/images/15498787534020.jpg"></p>
 <p><strong>系数</strong>计算基于历史行情数据进行训练，也就是进行尝试，即代入不同的预先设定系数值进行计算，计算结果越接近观测值，视为最优解。</p>
-<h2>存储平台</h2>
+<h2>数据平台</h2>
 <p><img alt="" src="/theme/images/15500428561940.jpg"></p>
 <h3>数据量</h3>
 <div class="highlight"><pre><span></span>15个节点，每天接收1G左右数据，2010-2017年总数据量大概1T左右，2010-2017年hbase数据总量1亿条左右
@@ -71,18 +71,56 @@ A: 每个因素的权重 - 系数</p>
 <p>500毫秒一个tick数据</p>
 <p>多线程异步写入kafka</p>
 <p>数据清洗和过滤逻辑，时间戳补齐，品种名称统一等等</p>
-<p>hbase的表名依据期货品种名称，key设计依据数据毫秒时间戳，利于业务数据操作</p>
+<p>hbase的表名和kafka的Topic名称依据期货品种名称设计，key设计依据数据毫秒时间戳，利于业务数据操作</p>
 <p><img alt="" src="/theme/images/15503854504009.jpg"></p>
 <h3>数据的批量导入</h3>
-<p>历史批量数据导入，使用BulkLoad快速导入HBase中</p>
+<p>历史批量数据导入，使用BulkLoad快速导入HBase中，其原理是直接将生产的特定文件格式直接导入到hdfs中，符合HBase底层数据文件格式，然后通过工具BulkLoad直接挂接到HBase下即可，会通过mapreduce批量执行任务，这样大大提高记录逐行导入至HBase的效率。</p>
 <p><img alt="" src="/theme/images/15503860892368.jpg"></p>
+<h3>kafka</h3>
+<p>topic的partiton个数需要根据consumer并行度设置，即在consumer group中有几个consumer实例，就设置几个partion，其目的是为了最大化topic的并行消费能力。</p>
+<p><img alt="" src="media/15508899587893.jpg"></p>
+<h3>mapreduce</h3>
+<p>Mapper中执行程序找不到hbase相关的jar，cp到hadoop目录下的lib也不行，使用assemble把依赖的包全部打成一个jar；</p>
+<p>集群上运行mapreduce程序，需要读取hbase相关，可能找不到hbase配置文件的问题</p>
+<div class="highlight"><pre><span></span>hadoop-env.sh
+export HADOOP_CLASSPATH=&quot;$HADOOP_CLASSPATH:$HBASE_HOME/lib/*&quot;
+</pre></div>
+
+
+<h3>HBase</h3>
+<p>开启thrift服务，用于python访问</p>
+<p>linux系统最大文件打开数设置，否则出现Premature EOF from inputStream异常</p>
+<p>增加压缩存储功能snappy，否则hdfs空间占用太大</p>
 <h3>日志</h3>
-<p>平台在生产过程中，产生大量日志，其中zookeeper的日志较多，通过脚本定时清理。</p>
+<p>平台在生产过程中，产生大量日志，其中zookeeper的日志较多，通过脚本或者命令清理。</p>
+<div class="highlight"><pre><span></span>echo “”&gt;zookeeper.out
+
+ls | xargs truncate -s 0
+</pre></div>
+
+
+<h3>pandas</h3>
+<p><img alt="" src="media/15508911025681.jpg"></p>
 <h3>监控</h3>
 <p>Ambari来监控所有硬件资源和软件服务，较好的ui方便数据平台的管理。</p>
 <p><img alt="" src="/theme/images/15503889213049.jpg"></p>
 <h2>计算平台Spark</h2>
-<p>因子和权重系数计算使用spark计算平台，10个节点，从21分钟优化到2.7分钟</p>
+<p>总计算节点的总核数决定了并发执行的task数；</p>
+<p>多线程、进程增加多作业执行，增加并行度；配置在作业之间轮询调度；</p>
+<div class="highlight"><pre><span></span>conf.set(&quot;spark.scheduler.mode&quot;, &quot;FAIR&quot;)
+</pre></div>
+
+
+<p>尽量把数据分成等份的task进行并行计算，不让每个task计算时间过长，对数据进行partition，需要不断调试，找到合适的值；</p>
+<p>对于pair类型的rdd，尽量把key进行细化，在拆分，这样数据集粒度更细，并行度更好；</p>
+<p>当rdd后续需要进行各种join等连接操作时，特别是对于pair rdd，就需要进行分区；并且如果此rdd被反复多次使用，就需要cache操作；</p>
+<p>做join的时候，尽量用小RDD去join大RDD，用大RDD去join超大的RDD；</p>
+<p>RDD如果后面使用迭代，建议cache，但是一定要估计好数据的大小，避免比cache设定的内存还要大，如果大过内存就会删除之前存储的cache，可能导致计算错误，如果想要完全的存储可以设置如下</p>
+<div class="highlight"><pre><span></span>persist（MEMORY_AND_DISK）
+</pre></div>
+
+
+<p>因子和权重系数计算使用spark计算平台，10个节点，从21分钟优化到2.7分钟；</p>
 <p><img alt="" src="/theme/images/15500450680920.jpg"></p>
 <p><img alt="" src="/theme/images/15500451009690.jpg"></p>
     </div>
