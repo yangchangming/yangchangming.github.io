@@ -1,56 +1,68 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="">
-    <meta name="keywords" content="alerting, monitoring, alert, monitor">
-    <!-- disable auto fresh every 60 seconds -->
-    <!--
-    <meta http-equiv="refresh" content="60">
-    -->
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <title>    数据平台笔记-从硬件组装开始
+</title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width">
+            <link rel="stylesheet" href="/theme/css/normalize.css">
+        <link href='//fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
+        <link href='//fonts.googleapis.com/css?family=Oswald' rel='stylesheet' type='text/css'>
+        <link rel="stylesheet" href="/theme/css/font-awesome.min.css">
+        <link rel="stylesheet" href="/theme/css/main.css">
 
-    <title>数据平台笔记-从硬件组装开始</title>
-    <link rel="stylesheet" href="/theme/css/bootstrap.min.css" >
-    <link rel="stylesheet" href="/theme/css/dashboard.css" >
-    <link rel="stylesheet" type="text/css" href="/theme/css/style.css" />
+    <link rel="stylesheet" href="/theme/css/blog.css">
+    <link rel="stylesheet" href="/theme/css/github.css">
+        <script src="/theme/js/vendor/modernizr-2.6.2.min.js"></script>
+    </head>
+    <body>
+        <!--[if lt IE 7]>
+            <p class="chromeframe">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> or <a href="http://www.google.com/chromeframe/?redirect=true">activate Google Chrome Frame</a> to improve your experience.</p>
+        <![endif]-->
 
-    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
-    <!--[if lt IE 9]>
-    <script src="/theme/js/html5shiv.js" type="text/javascript"></script>
-    <script src="/theme/js/respond.js" type="text/javascript"></script>
-    <![endif]-->
+        <div id="wrapper">
+<header id="sidebar" class="side-shadow">
+    <hgroup id="site-header">
+        <a id="site-title" href=""><h1><i class="icon-coffee"></i> 杨昌明的Blog</h1></a>
+        <!-- <p id="site-desc"></p> -->
+    </hgroup>
 
-  </head>
+    <nav>
+        <ul id="nav-links">
+                <li><a href="/">最新文章</a></li>
+                <li><a href="/archives">文章存档</a></li>
+                <li><a href="/about">关于我</a></li>
+        </ul>
+    </nav>
+    <!-- <footer id="site-info">
+    <p>
+        Proudly powered by <a href="http://getpelican.com/" target="pelican">Pelican</a> and <a href="http://python.org/" target="python">Python</a>. Theme by <a href="https://github.com/hdra/pelican-cait" target="github">hndr</a>.
+    </p>
+    <p>
+        Textures by <a href="http://subtlepatterns.com/" target="subtlepatterns">Subtle Pattern</a>. Font Awesome by <a href="http://fortawesome.github.io/Font-Awesome/" target="github">Dave Grandy</a>.
+    </p>
+</footer> -->
+</header>
+    <div id="post-container" class="article-container">
+        <ol id="post-list">
+            <li>
+                <article class="post-entry">
+                    <header class="entry-header">
+                        <a href="/pages/device" rel="bookmark"><h1>数据平台笔记-从硬件组装开始</h1></a>
 
-  <body>
-    <div class="navbar navbar-inverse navbar-fixed-top">
-      <div class="container-fluid">
-        <div class="navbar-header">
-          <a class="navbar-brand" href="/" style="border-bottom: 0px;">杨昌明的Blog </a>
-        </div>
-      </div>
-    </div>
+                        <div class="post-time">
+                                日期:&nbsp;2017-12-17&nbsp;&nbsp;&nbsp;&nbsp;<a href="http://weibo.com/changmingy" target="_blank">changming</a>
+                        </div>
+                        <hr/>
+                    </header>
 
-    <div  class="container-fluid">
-        <div class="row">
-            <div class="col-sm-12  col-md-12 main">
-                <div id="content">
-<article>
-    <header>
-        <h3 class="article-title">
-            数据平台笔记-从硬件组装开始
-            <!--<a href="/pages/device" rel="bookmark" title="Permalink to 数据平台笔记-从硬件组装开始">数据平台笔记-从硬件组装开始</a>-->
-        </h3>
-        <hr/>
-        <div class="article-info">
-            日期:&nbsp;2017-12-17&nbsp;|&nbsp;关注我:&nbsp;<a href="http://weibo.com/changmingy" target="_blank">新浪微博</a>
-        </div>
-    </header>
-
-    <div class="article-content">
-        <p><img alt="" src="/theme/images/dp-server1.jpg"></p>
+                    <section class="post-content">
+                        <p><img alt="" src="/theme/images/dp-server1.jpg"></p>
 <p>数据没上个PB级别，都不好意思说是大数据，所以我就称之为数据平台吧。这里记录下一些数据平台搭建过程中的笔记。</p>
 <p>买了7台服务器，包括6台集群使用的，和一台工作站，工作站用于平时开发和快速计算用，比如GPU的计算。其他6台用于搭建集群，主要是用于存储金融数据和集群计算，还有其他的服务；服务器配置如下：</p>
 <p><strong>集群节点</strong></p>
@@ -75,24 +87,19 @@ OS: 4.10.0-37-generic #41~16.04.1-Ubuntu
 
 
 <p>工作站的磁盘是已经安装好的，集群的每个节点的磁盘都是重新买的，每个节点2块磁盘，然后一个一个手动安装上去，完了每个节点都从头开始做RAID5，安装操作系统，并且更新centos源和软件，最后在新买的机柜上面插入服务器，接入局域网的千兆路由器；每个节点的IP都已经设定好，不能修改；通电并接入UPS后，正常运行，硬件部分工作完成。</p>
+                    </section>
+                    <hr/>
+                    <aside class="post-meta">
+                        <p>Category: <a href="/category/dataplatform.html">dataplatform</a></p>
+                        <p>Tags: <a href="/tag/hadoop.html">hadoop</a>, </p>
+                    </aside>
+                    <hr/>
+                </article>
+            </li>
+        </ol>
     </div>
-
-
-</article>
-                </div>
-            </div>
         </div>
-    </div>
 
-
-    <!-- Placed at the end of the document so the pages load faster -->
-    <script src="/theme/js/jquery.min.js"></script>
-    <script src="/theme/js/bootstrap.min.js"></script>
-
-    <!-- svg JavaScript================== -->
-    <!-- Placed at the end of the document so the pages load faster -->
-    <script type="text/javascript" src="/theme/js/svg.jquery.js"></script>
-    <script type="text/javascript" src="/theme/js/pygal-tooltips.js"></script>
-
-  </body>
+        <script src="/theme/js/main.js"></script>
+    </body>
 </html>
